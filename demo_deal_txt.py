@@ -39,7 +39,7 @@ if first_line[time_end + 1: time_end + 5] == "AA23" and first_line[-2:] == "55":
 print(pres_decimal_arr)
 # [3253, 3919, 4095, 3163, 4095, 4095, 3955, 3272, 1785, 1847, 2919, 1455, 2629, 2516, 1743, 3815]
 # [842, 176, 0, 932, 0, 0, 140, 823, 2310, 2248, 1176, 2640, 1466, 1579, 2352, 280]
-normalized_arr = [x / 4095.0 for x in pres_decimal_arr]
+normalized_arr = [x / 4096.0 for x in pres_decimal_arr]
 print(normalized_arr)
 
 ##### Convert data #####
@@ -53,8 +53,8 @@ print(first_line_convert)
 time_start_convert = first_line_convert.find("[")
 time_end_convert = first_line_convert.find("]")
 
-convert_data_arr = [1023-int(x) for x in first_line_convert[time_end_convert + 1:].split(',')]
+convert_data_arr = [1024-int(x) for x in first_line_convert[time_end_convert + 1:].split(',')]
 print(convert_data_arr)
 # [41, 131, 62, 95, 10, 26, 9, 42, 115, 368, 547, 709, 229, 253, 537, 369]
-normalized_convert_arr = [x / 1023.0 for x in convert_data_arr]
+normalized_convert_arr = [x / 1024.0 for x in convert_data_arr]
 print(normalized_convert_arr)

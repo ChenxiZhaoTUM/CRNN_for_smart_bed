@@ -253,31 +253,6 @@ def save_data_from_files(isTest=False):
     return all_common_data
 
 
-##### split common data into inputs_pressure and targets #####
-inputs = []
-targets = []
-all_common_data = save_data_from_files()
-inputs_pressure = []
-
-for common_data_id in range(len(all_common_data)):
-    value = all_common_data[common_data_id]
-    input_data = value['input_data']
-    target_data = value['target_data']
-    if common_data_id < len(all_common_data):
-        inputs.append(input_data)
-        targets.append(target_data)
-
-        input_pressure = np.zeros((32, 64))
-        for i in range(16):
-            input_pressure[:, i * 4: (i + 1) * 4] = input_data[i]
-            # print(input_pressure)
-
-        inputs_pressure.append(input_pressure)
-
-
-# print(inputs_pressure)
-
-
 ##### draw dynamic picture by second #####
 def dynamic_pic(inputs_pressure, target_arr):
     def update(frame):
@@ -306,4 +281,28 @@ def dynamic_pic(inputs_pressure, target_arr):
     plt.show()
 
 
-dynamic_pic(inputs_pressure, targets)
+if __name__ == "__main__":
+    ##### split common data into inputs_pressure and targets #####
+    inputs = []
+    targets = []
+    all_common_data = save_data_from_files()
+    inputs_pressure = []
+
+    for common_data_id in range(len(all_common_data)):
+        value = all_common_data[common_data_id]
+        input_data = value['input_data']
+        target_data = value['target_data']
+        if common_data_id < len(all_common_data):
+            inputs.append(input_data)
+            targets.append(target_data)
+
+            input_pressure = np.zeros((32, 64))
+            for i in range(16):
+                input_pressure[:, i * 4: (i + 1) * 4] = input_data[i]
+                # print(input_pressure)
+
+            inputs_pressure.append(input_pressure)
+
+    # print(inputs_pressure)
+
+    dynamic_pic(inputs_pressure, targets)
