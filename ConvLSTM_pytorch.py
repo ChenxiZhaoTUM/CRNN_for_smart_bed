@@ -3,9 +3,14 @@ import torch
 
 """
 https://github.com/ndrplz/ConvLSTM_pytorch/tree/master
-Original framework: https://github.com/czifan/ConvLSTM.pytorch/tree/master
-Reference paper: Convolutional LSTM Network: A Machine Learning Approach for Precipitation Nowcasting_2015 Xingjian Shi
+
+
+Original reference paper: Convolutional LSTM Network: A Machine Learning Approach for Precipitation Nowcasting_2015 Xingjian Shi
+Framework: https://github.com/czifan/ConvLSTM.pytorch/tree/master 
+
+Another implementation: https://github.com/rogertrullo/pytorch_convlstm/tree/master
 """
+
 
 class ConvLSTMCell(nn.Module):
 
@@ -64,7 +69,6 @@ class ConvLSTMCell(nn.Module):
 
 
 class ConvLSTM(nn.Module):
-
     """
 
     Parameters:
@@ -177,7 +181,7 @@ class ConvLSTM(nn.Module):
             last_state_list = last_state_list[-1:]
 
             if self.only_last_time:
-                layer_output_list = [layer_output_list[-1][:, -1:, :, :]]
+                layer_output_list = [layer_output_list[-1][:, -1:, :, :].squeeze(dim=1)]
 
         return layer_output_list, last_state_list
 

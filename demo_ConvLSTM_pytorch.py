@@ -40,9 +40,9 @@ def blockUNet(in_c, out_c, name, transposed=False, bn=True, relu=True, factor=2,
 
 
 ## ------------------------ CnnEncoder * 10 + CnnDecoder * 10 + ConvLSTM ---------------------- ##
-class UNet_ConvLSTM(nn.Module):
+class UNetCNN(nn.Module):
     def __init__(self, channelExponent=3, dropout=0.):
-        super(UNet_ConvLSTM, self).__init__()
+        super(UNetCNN, self).__init__()
         channels = int(2 ** channelExponent + 0.5)
 
         self.layer1 = nn.Sequential()
@@ -75,9 +75,6 @@ class UNet_ConvLSTM(nn.Module):
         self.dlayer1.add_module('dlayer1_relu', nn.ReLU(inplace=True))
         self.dlayer1.add_module('dlayer1_tconv', nn.ConvTranspose2d(channels * 2, 1, 4, 2, 1, bias=True))
 
-        self.convlstm = ConvLSTM(1, 1, (3, 3), 1, True, True, False, True)
-        # input_channel, output_channel, kernel_size, num_layers, batch_first, bias, return_all_layers, only_last_time
-
     def forward(self, x_3d):
         unet_embed_seq = []
         for t in range(x_3d.size(1)):
@@ -104,17 +101,24 @@ class UNet_ConvLSTM(nn.Module):
             unet_embed_seq.append(dout1)
 
         # swap time and sample dim such that (sample dim, time dim, CNN latent dim)
-        unet_embed_seq = torch.stack(unet_embed_seq, dim=0).transpose_(0, 1)  # torch.Size([20, 10, 1, 32, 64])
+        unet_embed_seq = torch.stack(unet_embed_seq, dim=0).transpose_(0, 1)
         # unet_embed_seq: shape=(batch, time_step, input_size)
 
-        layer_output, last_states = self.convlstm(unet_embed_seq)
-        # layer_output[0]: (batch_size, time_step, output_channels, height, width) of the last layer
-        last_time_of_last_layer_output = layer_output[-1]
-        return last_time_of_last_layer_output
+        return unet_embed_seq    # torch.Size([20, 10, 1, 32, 64])
 
 
 if __name__ == "__main__":
     input_tensor = torch.randn(20, 10, 12, 32, 64)  # (batch_size, time_step, channels, height, width)
-    model = UNet_ConvLSTM()
-    output_tensor = model(input_tensor)
-    print(output_tensor.shape)  # torch.Size([20, 1, 32, 64])
+    model = UNetCNN()
+    UNetCNN_output = model(input_tensor)
+    print(UNetCNN_output.shape)  # torch.Size([20, 10, 1, 32, 64])
+
+    convlstm = ConvLSTM(1, 1, (3, 3), 1, True, True, False, True)
+    # input_channel, output_channel, kernel_size, num_layers, batch_first, bias, return_all_layers, only_last_time
+    layer_output, last_states = convlstm(UNetCNN_output)
+
+    print(layer_output[-1].size())  # (batch_size, time_step, output_channels, height, width) of the last layer
+    # torch.Size([20, 10, 1, 32, 64])  or torch.Size([20, 1, 32, 64])  depends on only_last_time=True?
+
+    # print(last_states[0][0].size())  # hn: torch.Size([20, 1, 32, 64])  # the last time step
+    # print(last_states[0][1].size())  # cn: torch.Size([20, 1, 32, 64])

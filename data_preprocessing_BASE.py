@@ -58,7 +58,7 @@ class PressureDataset(Dataset):
 
         if not self.mode == self.TEST:
             # split for train/validation sets (80/20)
-            targetLength = 0.8 * self.totalLength
+            targetLength = int(0.8 * self.totalLength)
 
             self.inputs = []
             self.inputs_sleep = []
@@ -113,7 +113,9 @@ class PressureDataset(Dataset):
         for i in range(16):
             new_input_data[11, :, i * 4: (i + 1) * 4] = input_data[i]
 
-        return new_input_data, torch.from_numpy(target_data)  # to Tensor
+        new_target_data = torch.from_numpy(target_data).unsqueeze(0)  # to Tensor
+
+        return new_input_data, new_target_data
 
     def denormalize(self, np_array):
         denormalized_data = np_array * (self.target_max - self.target_min) + self.target_min
@@ -144,7 +146,9 @@ class ValiDataset(PressureDataset):
         for i in range(16):
             new_input_data[11, :, i * 4: (i + 1) * 4] = input_data[i]
 
-        return new_input_data, torch.from_numpy(target_data)  # to Tensor
+        new_target_data = torch.from_numpy(target_data).unsqueeze(0)  # to Tensor
+
+        return new_input_data, new_target_data
 
 
 class TestPressureDataset(unittest.TestCase):
@@ -157,7 +161,7 @@ class TestPressureDataset(unittest.TestCase):
         new_input_data, target_data = self.pressure_dataset[idx]
 
         self.assertEqual(new_input_data.shape, torch.Size([12, 32, 64]))
-        self.assertEqual(target_data.shape, torch.Size([32, 64]))
+        self.assertEqual(target_data.shape, torch.Size([1, 32, 64]))
 
 
 if __name__ == '__main__':
