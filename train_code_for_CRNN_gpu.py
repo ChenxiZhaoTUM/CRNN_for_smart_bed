@@ -6,7 +6,7 @@ from torch.autograd import Variable
 from torch.utils.data import DataLoader
 import torch.optim as optim
 from CnnEncoder_RNN_CnnDecoder import weights_init, CRNN
-import data_preprocessing_for_CRNN as dp
+import data_preprocessing_for_CRNN_gpu as dp
 import utils
 
 ##### basic settings #####
@@ -69,12 +69,16 @@ if len(doLoad) > 0:
     # netG.load_state_dict(torch.load(doLoad))
     netG.load_state_dict(torch.load(doLoad, map_location=torch.device('cpu')))
     print("Loaded model " + doLoad)
+netG.cuda()
 
 criterionL1 = nn.L1Loss()
+criterionL1.cuda()
 optimizerG = optim.Adam(netG.parameters(), lr=lrG, betas=(0.5, 0.999), weight_decay=0.0)
 
 inputs = Variable(torch.FloatTensor(batch_size, time_step, 12, 32, 64))
 targets = Variable(torch.FloatTensor(batch_size, 1, 32, 64))
+inputs = inputs.cuda()
+targets = targets.cuda()
 
 ##### training begins #####
 for epoch in range(epochs):
@@ -91,8 +95,10 @@ for epoch in range(epochs):
         # print(inputs_cpu.size())  # torch.Size([50, 10, 12, 32, 64])
         # print(targets_cpu.size())  # torch.Size([50, 1, 32, 64])
 
-        inputs.data.copy_(inputs_cpu.float())
-        targets.data.copy_(targets_cpu.float())
+        inputs_cpu = inputs_cpu.float().cuda()
+        targets_cpu = targets_cpu.float().cuda()
+        inputs.data.resize_as_(inputs_cpu).copy_(inputs_cpu)
+        targets.data.resize_as_(targets_cpu).copy_(targets_cpu)
 
         # compute LR decay
         if decayLr:
@@ -126,7 +132,7 @@ for epoch in range(epochs):
                 utils.imageOut("TRAIN_CRNN_0.01/epoch{}_{}_{}".format(epoch, i, j), inputs[j],
                                targets_denormalized[j], outputs_denormalized[j])
 
-        if lossL1viz < 10:
+        if lossL1viz < 0.01:
             torch.save(netG.state_dict(), prefix + "model")
 
     # VALIDATION
@@ -140,8 +146,10 @@ for epoch in range(epochs):
         # print(inputs_cpu.size())  # torch.Size([50, 10, 12, 32, 64])
         # print(targets_cpu.size())  # torch.Size([50, 1, 32, 64])
 
-        inputs.data.copy_(inputs_cpu.float())
-        targets.data.copy_(targets_cpu.float())
+        inputs_cpu = inputs_cpu.float().cuda()
+        targets_cpu = targets_cpu.float().cuda()
+        inputs.data.resize_as_(inputs_cpu).copy_(inputs_cpu)
+        targets.data.resize_as_(targets_cpu).copy_(targets_cpu)
 
         outputs = netG(inputs)
         outputs_cpu = outputs.data.cpu().numpy()

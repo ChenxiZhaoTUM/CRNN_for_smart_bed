@@ -26,10 +26,13 @@ testLoader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
 print("Test batches: {}".format(len(testLoader)))
 
 inputs = Variable(torch.FloatTensor(batch_size, time_step, 12, 32, 64))
+inputs = inputs.cuda()
 targets = Variable(torch.FloatTensor(batch_size, 1, 32, 64))
-
+targets = targets.cuda()
 targets_dn = Variable(torch.FloatTensor(batch_size, 1, 32, 64))
+targets_dn = targets_dn.cuda()
 outputs_dn = Variable(torch.FloatTensor(batch_size, 1, 32, 64))
+outputs_dn = outputs_dn.cuda()
 
 netG = CRNN(channelExponent=expo)
 print(netG)  # print full net
@@ -38,8 +41,10 @@ doLoad = "CRNN_01_model"
 if len(doLoad) > 0:
     netG.load_state_dict(torch.load(doLoad))
     print("Loaded model " + doLoad)
+netG.cuda()
 
 criterionL1 = nn.L1Loss()
+criterionL1.cuda()
 
 L1val_accum = 0.0
 L1val_dn_accum = 0.0
@@ -51,8 +56,10 @@ netG.eval()
 for i, testdata in enumerate(testLoader, 0):
     inputs_cpu, targets_cpu = testdata
 
-    inputs.data.copy_(inputs_cpu.float())
-    targets.data.copy_(targets_cpu.float())
+    inputs_cpu = inputs_cpu.float().cuda()
+    targets_cpu = targets_cpu.float().cuda()
+    inputs.data.resize_as_(inputs_cpu).copy_(inputs_cpu)
+    targets.data.resize_as_(targets_cpu).copy_(targets_cpu)
 
     outputs = netG(inputs)
     targets_cpu = targets.data.cpu().numpy()
@@ -71,8 +78,8 @@ for i, testdata in enumerate(testLoader, 0):
     targets_denormalized = dataset.denormalize(targets_cpu)
     outputs_denormalized = dataset.denormalize(outputs_cpu)
 
-    targets_denormalized_compare = torch.from_numpy(targets_denormalized)
-    outputs_denormalized_compare = torch.from_numpy(outputs_denormalized)
+    targets_denormalized_compare = torch.from_numpy(targets_denormalized).float().cuda()
+    outputs_denormalized_compare = torch.from_numpy(outputs_denormalized).float().cuda()
 
     targets_dn.data.resize_as_(targets_denormalized_compare).copy_(targets_denormalized_compare)
     outputs_dn.data.resize_as_(outputs_denormalized_compare).copy_(outputs_denormalized_compare)
