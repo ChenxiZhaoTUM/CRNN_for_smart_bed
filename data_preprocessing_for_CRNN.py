@@ -61,8 +61,8 @@ class PressureDataset(Dataset):
 
         if not self.mode == self.TEST:
             # split for train/validation sets (80/20)
-            # targetLength = int(0.8 * self.totalLength)
-            targetLength = self.totalLength
+            targetLength = int(0.8 * self.totalLength)
+            # targetLength = self.totalLength
 
             self.inputs = []
             self.inputs_sleep = []
@@ -103,13 +103,18 @@ class PressureDataset(Dataset):
 
         self.new_inputs, self.new_targets = self.change_dimension()
         # test code
+        print()
+        print("The size of train data: ")
         print(self.new_inputs.shape)  # (554, 12, 32, 64)
         print(self.new_targets.shape)  # (554, 1, 32, 64)
 
         self.inputs_group, self.target_group = self.extract_data()
         # test code
+        print()
+        print("The size of train data splited by time step: ")
         print(self.inputs_group.shape)  # (544, 10, 12, 32, 64)
         print(self.target_group.shape)  # (544, 1, 32, 64)
+        print()
 
     def __len__(self):
         if self.totalLength > self.time_step:
@@ -129,7 +134,7 @@ class PressureDataset(Dataset):
             new_input_data = torch.zeros(12, 32, 64)
 
             for j in range(11):
-                new_input_data[j, :, :] = input_sleep_data[j]  # index-th set input_sleep_data to 11 channels
+                new_input_data[j, :, :] = input_sleep_data[j]  # input_sleep_data to 11 channels
 
             for j in range(16):
                 new_input_data[11, :, j * 4: (j + 1) * 4] = input_data[j]

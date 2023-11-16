@@ -29,7 +29,7 @@ saveL1 = True
 # add Dropout2d layer?
 dropout = 0
 
-prefix = ""
+prefix = "CRNN_01_"
 if len(sys.argv) > 1:
     prefix = sys.argv[1]
     print("Output prefix: {}".format(prefix))
@@ -53,6 +53,7 @@ print("Training batches: {}".format(len(trainLoader)))
 dataValidation = dp.ValiDataset(data)
 valiLoader = DataLoader(dataValidation, batch_size=batch_size, shuffle=False, drop_last=True)
 print("Validation batches: {}".format(len(valiLoader)))
+print()
 
 ##### setup training #####
 epochs = int(iterations / len(trainLoader) + 0.5)
@@ -60,7 +61,7 @@ netG = CRNN(channelExponent=expo, dropout=dropout)
 print(netG)  # print full net
 model_parameters = filter(lambda p: p.requires_grad, netG.parameters())
 params = sum([np.prod(p.size()) for p in model_parameters])
-print("Initialized ConvNet with {} trainable params ".format(params))
+print("Initialized CRNN with {} trainable params ".format(params))
 print()
 
 netG.apply(weights_init)
@@ -82,33 +83,49 @@ for epoch in range(epochs):
     netG.train()
     L1_accum = 0.0
     for i, traindata in enumerate(trainLoader, 0):
-        print(i)
         inputs_cpu, targets_cpu = traindata
-        # torch.Size([50, 10, 12, 32, 64]) and torch.Size([50, 1, 32, 64])
 
-        print(inputs_cpu.size())
-        print(targets_cpu.size())
+        # test code
+        # print(i)
+        # print(inputs_cpu.size())  # torch.Size([50, 10, 12, 32, 64])
+        # print(targets_cpu.size())  # torch.Size([50, 1, 32, 64])
 
-        # inputs.data.copy_(inputs_cpu.float())
-        # targets.data.copy_(targets_cpu.float())
-        #
-        # # compute LR decay
-        # if decayLr:
-        #     currLr = utils.computeLR(epoch, epochs, lrG * 0.1, lrG)
-        #     if currLr < lrG:
-        #         for g in optimizerG.param_groups:
-        #             g['lr'] = currLr
-        #
-        # netG.zero_grad()
-        # gen_out = netG(inputs)
-        # gen_out_cpu = gen_out.data.cpu().numpy()
-        #
-        # lossL1 = criterionL1(gen_out, targets)
-        # lossL1.backward()
-        #
-        # optimizerG.step()
-        #
-        # lossL1viz = lossL1.item()
-        # L1_accum += lossL1viz
+        inputs.data.copy_(inputs_cpu.float())
+        targets.data.copy_(targets_cpu.float())
+
+        # compute LR decay
+        if decayLr:
+            currLr = utils.computeLR(epoch, epochs, lrG * 0.1, lrG)
+            if currLr < lrG:
+                for g in optimizerG.param_groups:
+                    g['lr'] = currLr
+
+        netG.zero_grad()
+        gen_out = netG(inputs)
+        gen_out_cpu = gen_out.data.cpu().numpy()
+
+        lossL1 = criterionL1(gen_out, targets)
+        lossL1.backward()
+
+        optimizerG.step()
+
+        lossL1viz = lossL1.item()
+        L1_accum += lossL1viz
+
+        if i == len(trainLoader) - 1:
+            logline = "Epoch: {}, batch-idx: {}, L1: {}\n".format(epoch, i, lossL1viz)
+            print(logline)
+
+        targets_denormalized = data.denormalize(targets_cpu.cpu().numpy())
+        outputs_denormalized = data.denormalize(gen_out_cpu)
+
+        if lossL1viz < 0.01:
+            for j in range(batch_size):
+                utils.makeDirs(["TRAIN_CRNN_0.006"])
+                utils.imageOut("TRAIN_CRNN_0.006/epoch{}_{}_{}".format(epoch, i, j), inputs[j],
+                               targets_denormalized[j], outputs_denormalized[j])
+
+        if lossL1viz < 0.01:
+            torch.save(netG.state_dict(), prefix + "modelG")
 
     pass

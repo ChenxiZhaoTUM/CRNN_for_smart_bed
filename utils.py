@@ -22,3 +22,33 @@ def makeDirs(directoryList):
     for directory in directoryList:
         if not os.path.exists(directory):
             os.makedirs(directory)
+
+def imageOut(filename, _input, _target, _output, max_val=100, min_val=0):
+    target = np.copy(_target)
+    output = np.copy(_output)
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 10))
+
+    last_channel = _input[-1, -1, :, :]
+    last_channel_image = np.reshape(last_channel, (32, 64))
+    ax1.set_aspect('equal', 'box')
+    im1 = ax1.imshow(last_channel_image, cmap='jet')
+    ax1.axis('off')
+    cbar1 = fig.colorbar(im1, ax=ax1)
+
+    ax2.set_aspect('equal', 'box')
+    target_image = np.reshape(target, (32, 64))
+    im2 = ax2.imshow(target_image, cmap='jet', vmin=min_val, vmax=max_val)
+    ax2.axis('off')
+    cbar2 = fig.colorbar(im2, ax=ax2)
+
+    ax3.set_aspect('equal', 'box')
+    output_image = np.reshape(output, (32, 64))
+    im3 = ax3.imshow(output_image, cmap='jet', vmin=min_val, vmax=max_val)
+    ax3.axis('off')
+    cbar3 = fig.colorbar(im3, ax=ax3)
+
+    plt.tight_layout()
+    save_path = os.path.join(filename)
+    plt.savefig(save_path)
+    plt.close(fig)
+
