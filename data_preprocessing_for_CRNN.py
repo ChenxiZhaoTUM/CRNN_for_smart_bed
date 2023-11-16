@@ -175,6 +175,8 @@ class ValiDataset(PressureDataset):
         self.targets = dataset.valiTargets
         self.totalLength = dataset.valiLength
         self.time_step = dataset.time_step
+        self.inputs_group = dataset.inputs_group
+        self.target_group = dataset.target_group
 
     def __len__(self):
         if self.totalLength > self.time_step:

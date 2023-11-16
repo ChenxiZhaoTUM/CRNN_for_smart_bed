@@ -80,6 +80,7 @@ targets = Variable(torch.FloatTensor(batch_size, 1, 32, 64))
 for epoch in range(epochs):
     print("Starting epoch {} / {}".format((epoch + 1), epochs))
 
+    # TRAIN
     netG.train()
     L1_accum = 0.0
     for i, traindata in enumerate(trainLoader, 0):
@@ -121,11 +122,46 @@ for epoch in range(epochs):
 
         if lossL1viz < 0.01:
             for j in range(batch_size):
-                utils.makeDirs(["TRAIN_CRNN_0.006"])
-                utils.imageOut("TRAIN_CRNN_0.006/epoch{}_{}_{}".format(epoch, i, j), inputs[j],
+                utils.makeDirs(["TRAIN_CRNN_0.01"])
+                utils.imageOut("TRAIN_CRNN_0.01/epoch{}_{}_{}".format(epoch, i, j), inputs[j],
                                targets_denormalized[j], outputs_denormalized[j])
 
         if lossL1viz < 0.01:
             torch.save(netG.state_dict(), prefix + "modelG")
 
-    pass
+    # VALIDATION
+    netG.eval()
+    L1val_accum = 0.0
+    for i, validata in enumerate(valiLoader, 0):
+        inputs_cpu, targets_cpu = validata
+
+        # test code
+        # print(i)
+        # print(inputs_cpu.size())  # torch.Size([50, 10, 12, 32, 64])
+        # print(targets_cpu.size())  # torch.Size([50, 1, 32, 64])
+
+        inputs.data.copy_(inputs_cpu.float())
+        targets.data.copy_(targets_cpu.float())
+
+        outputs = netG(inputs)
+        outputs_cpu = outputs.data.cpu().numpy()
+
+        lossL1 = criterionL1(outputs, targets)
+        L1val_accum += lossL1.item()
+
+        targets_denormalized = data.denormalize(targets_cpu.cpu().numpy())
+        outputs_denormalized = data.denormalize(outputs_cpu)
+
+        if lossL1viz < 0.01:
+            for j in range(batch_size):
+                utils.makeDirs(["VALIDATION_CRNN_0.01"])
+                utils.imageOut("VALIDATION_CRNN_0.01/epoch{}_{}_{}".format(epoch, i, j), inputs[j],
+                               targets_denormalized[j], outputs_denormalized[j])
+
+    L1_accum /= len(trainLoader)
+    if saveL1:
+        if epoch == 0:
+            utils.resetLog(prefix + "L1.txt")
+            utils.resetLog(prefix + "L1val.txt")
+        utils.log(prefix + "L1.txt", "{} ".format(L1_accum), False)
+        utils.log(prefix + "L1val.txt", "{} ".format(L1val_accum), False)

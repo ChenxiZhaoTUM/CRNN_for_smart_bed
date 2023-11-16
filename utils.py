@@ -23,6 +23,7 @@ def makeDirs(directoryList):
         if not os.path.exists(directory):
             os.makedirs(directory)
 
+
 def imageOut(filename, _input, _target, _output, max_val=100, min_val=0):
     target = np.copy(_target)
     output = np.copy(_output)
@@ -52,3 +53,16 @@ def imageOut(filename, _input, _target, _output, max_val=100, min_val=0):
     plt.savefig(save_path)
     plt.close(fig)
 
+
+def log(file, line, doPrint=True):
+    f = open(file, "a+")
+    f.write(line + "\n")
+    f.close()
+    if doPrint:
+        print(line)
+
+
+# reset log file
+def resetLog(file):
+    f = open(file, "w")
+    f.close()
