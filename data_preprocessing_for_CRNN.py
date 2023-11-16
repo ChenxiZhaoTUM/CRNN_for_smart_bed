@@ -101,28 +101,61 @@ class PressureDataset(Dataset):
                 self.inputs_sleep.append(input_sleep_data)
                 self.targets.append(target_data)
 
+        self.new_inputs, self.new_targets = self.change_dimension()
+        # test code
+        print(self.new_inputs.shape)  # (554, 12, 32, 64)
+        print(self.new_targets.shape)  # (554, 1, 32, 64)
+
+        self.inputs_group, self.target_group = self.extract_data()
+        # test code
+        print(self.inputs_group.shape)  # (544, 10, 12, 32, 64)
+        print(self.target_group.shape)  # (544, 1, 32, 64)
+
     def __len__(self):
-        return self.totalLength
+        if self.totalLength > self.time_step:
+            length = self.totalLength - self.time_step
+        else:
+            length = 0
+        return length
 
-    def __getitem__(self, idx):
-        input_data_group = self.inputs[idx: (idx + self.time_step)]  # index-th sets data in a batch (a full time step)
-        input_sleep_data_group = self.inputs_sleep[idx: (idx + self.time_step)]
-        target_data = self.targets[idx + self.time_step]  # only need the last one
+    def change_dimension(self):
+        new_inputs = []
+        new_targets = []
+        for i in range(self.totalLength):
+            input_data = self.inputs[i]
+            input_sleep_data = self.inputs_sleep[i]
+            target_data = self.targets[i]
 
-        input_data_in_a_full_time_step = torch.zeros(self.time_step, 12, 32, 64)
+            new_input_data = torch.zeros(12, 32, 64)
 
-        for i in range(self.time_step):
             for j in range(11):
-                input_data_in_a_full_time_step[i, j, :, :] = torch.tensor(input_sleep_data_group[i][j],
-                                                                          dtype=torch.float32)  # Stack along the first dimension
+                new_input_data[j, :, :] = input_sleep_data[j]  # index-th set input_sleep_data to 11 channels
 
             for j in range(16):
-                input_data_in_a_full_time_step[i, 11, :, j * 4: (j + 1) * 4] = torch.tensor(input_data_group[i][j],
-                                                                                            dtype=torch.float32)
+                new_input_data[11, :, j * 4: (j + 1) * 4] = input_data[j]
 
-        target_data_of_the_last_time = torch.from_numpy(target_data).unsqueeze(0)  # to Tensor
+            new_target_data = torch.from_numpy(target_data).unsqueeze(0)
 
-        return input_data_in_a_full_time_step, target_data_of_the_last_time
+            new_inputs.append(new_input_data)
+            new_targets.append(new_target_data)
+
+        new_inputs = np.array(new_inputs)
+        new_targets = np.array(new_targets)
+        return new_inputs, new_targets
+
+    def extract_data(self):
+        X = []
+        y = []
+        for i in range(self.totalLength - self.time_step):
+            X.append([a for a in self.new_inputs[i: (i + self.time_step)]])
+            y.append(self.new_targets[i + self.time_step])
+
+        X = np.array(X)
+        y = np.array(y)
+        return X, y
+
+    def __getitem__(self, idx):
+        return self.inputs_group[idx], self.target_group[idx]
 
     def denormalize(self, np_array):
         denormalized_data = np_array * (self.target_max - self.target_min) + self.target_min
@@ -136,31 +169,17 @@ class ValiDataset(PressureDataset):
         self.inputs_sleep = dataset.valiInputs_sleep
         self.targets = dataset.valiTargets
         self.totalLength = dataset.valiLength
+        self.time_step = dataset.time_step
 
     def __len__(self):
-        return self.totalLength
+        if self.totalLength > self.time_step:
+            length = self.totalLength - self.time_step
+        else:
+            length = 0
+        return length
 
     def __getitem__(self, idx):
-        # idx must be smaller than (self.totalLength - self.time_step)
-
-        input_data_group = self.inputs[idx: (idx + self.time_step)]  # index-th sets data in a batch (a full time step)
-        input_sleep_data_group = self.inputs_sleep[idx: (idx + self.time_step)]
-        target_data = self.targets[idx + self.time_step]  # only need the last one
-
-        input_data_in_a_full_time_step = torch.zeros(self.time_step, 12, 32, 64)
-
-        for i in range(self.time_step):
-            for j in range(11):
-                input_data_in_a_full_time_step[i, j, :, :] = torch.tensor(input_sleep_data_group[i][j],
-                                                                          dtype=torch.float32)  # Stack along the first dimension
-
-            for j in range(16):
-                input_data_in_a_full_time_step[i, 11, :, j * 4: (j + 1) * 4] = torch.tensor(input_data_group[i][j],
-                                                                                            dtype=torch.float32)
-
-        target_data_of_the_last_time = torch.from_numpy(target_data).unsqueeze(0)  # to Tensor
-
-        return input_data_in_a_full_time_step, target_data_of_the_last_time
+        return self.inputs_group[idx], self.target_group[idx]
 
 
 class TestPressureDataset(unittest.TestCase):
@@ -169,9 +188,9 @@ class TestPressureDataset(unittest.TestCase):
 
     def test_getitem_shape(self):
         idx = 0
-        input_data_in_a_full_time_step, target_data_of_the_last_time = self.pressure_dataset[idx]
-        self.assertEqual(input_data_in_a_full_time_step.shape, torch.Size([10, 12, 32, 64]))
-        self.assertEqual(target_data_of_the_last_time.shape, torch.Size([1, 32, 64]))
+        inputs_group, target_group = self.pressure_dataset[idx]
+        self.assertEqual(inputs_group.shape, torch.Size([10, 12, 32, 64]))
+        self.assertEqual(target_group.shape, torch.Size([1, 32, 64]))
 
 
 if __name__ == '__main__':

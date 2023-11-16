@@ -81,13 +81,13 @@ for epoch in range(epochs):
 
     netG.train()
     L1_accum = 0.0
-    for batch_index in range(0, len(trainLoader) - time_step):
-        print(batch_index)
-        inputs_cpu, targets_cpu = trainLoader.dataset[batch_index]
+    for i, traindata in enumerate(trainLoader, 0):
+        print(i)
+        inputs_cpu, targets_cpu = traindata
         # torch.Size([50, 10, 12, 32, 64]) and torch.Size([50, 1, 32, 64])
 
-        # print(inputs_cpu.size())
-        # print(targets_cpu.size())
+        print(inputs_cpu.size())
+        print(targets_cpu.size())
 
         # inputs.data.copy_(inputs_cpu.float())
         # targets.data.copy_(targets_cpu.float())
@@ -110,7 +110,5 @@ for epoch in range(epochs):
         #
         # lossL1viz = lossL1.item()
         # L1_accum += lossL1viz
-
-
 
     pass
