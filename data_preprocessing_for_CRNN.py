@@ -91,6 +91,7 @@ class PressureDataset(Dataset):
         else:
             # test mode
             self.inputs = []
+            self.inputs_sleep = []
             self.targets = []
             for common_data_id in range(self.totalLength):
                 value = self.common_data[common_data_id]
