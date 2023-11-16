@@ -117,7 +117,8 @@ class PressureDataset(Dataset):
                                                                           dtype=torch.float32)  # Stack along the first dimension
 
             for j in range(16):
-                input_data_in_a_full_time_step[i, 11, :, j * 4: (j + 1) * 4] = torch.tensor(input_data_group[i][j], dtype=torch.float32)
+                input_data_in_a_full_time_step[i, 11, :, j * 4: (j + 1) * 4] = torch.tensor(input_data_group[i][j],
+                                                                                            dtype=torch.float32)
 
         target_data_of_the_last_time = torch.from_numpy(target_data).unsqueeze(0)  # to Tensor
 
@@ -140,6 +141,8 @@ class ValiDataset(PressureDataset):
         return self.totalLength
 
     def __getitem__(self, idx):
+        # idx must be smaller than (self.totalLength - self.time_step)
+
         input_data_group = self.inputs[idx: (idx + self.time_step)]  # index-th sets data in a batch (a full time step)
         input_sleep_data_group = self.inputs_sleep[idx: (idx + self.time_step)]
         target_data = self.targets[idx + self.time_step]  # only need the last one
