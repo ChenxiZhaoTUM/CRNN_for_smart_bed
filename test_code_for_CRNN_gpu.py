@@ -5,7 +5,7 @@ import torch.nn as nn
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from CnnEncoder_RNN_CnnDecoder import CRNN
-import data_preprocessing_for_CRNN as dp
+import data_preprocessing_for_CRNN_gpu as dp
 import utils
 
 prefix = "CRNN_01_"

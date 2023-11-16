@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from torch.utils.data import Dataset
-import realtime_display_CPU as rd_cpu
+import realtime_display_gpu as rd_gpu
 import unittest
 
 pressureNormalization = True
@@ -54,7 +54,7 @@ class PressureDataset(Dataset):
         self.mode = mode
         self.dataDir = dataDir
         self.dataDirTest = dataDirTest  # only for mode==self.TEST
-        self.common_data = rd_cpu.save_data_from_files(isTest=False)
+        self.common_data = rd_gpu.save_data_from_files(isTest=False)
         self = loader_normalizer(self)
         self.totalLength = len(self.common_data)
         self.time_step = time_step
