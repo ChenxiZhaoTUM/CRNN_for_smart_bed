@@ -1,19 +1,21 @@
-import sys, random
+import random
+import sys
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.optim as optim
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
-import torch.optim as optim
-from CnnEncoder_RNN_CnnDecoder import weights_init, CRNN
+
 import data_preprocessing_for_CRNN as dp
 import utils
+from CnnEncoder_RNN_CnnDecoder import weights_init, CRNN
 
 ##### basic settings #####
 # number of training iterations
-iterations = 10000
+iterations = 10000000
 # batch size
-batch_size = 50
+batch_size = 100
 # time step
 time_step = 10
 # learning rate
@@ -34,7 +36,7 @@ if len(sys.argv) > 1:
     prefix = sys.argv[1]
     print("Output prefix: {}".format(prefix))
 
-doLoad = ""  # optional, path to pre-trained model
+doLoad = "CRNN_01_model"  # optional, path to pre-trained model
 
 print("LR: {}".format(lrG))
 print("LR decay: {}".format(decayLr))
@@ -120,13 +122,13 @@ for epoch in range(epochs):
         targets_denormalized = data.denormalize(targets_cpu.cpu().numpy())
         outputs_denormalized = data.denormalize(gen_out_cpu)
 
-        if lossL1viz < 0.01:
+        if lossL1viz < 0.001:
             for j in range(batch_size):
-                utils.makeDirs(["TRAIN_CRNN_0.01"])
-                utils.imageOut("TRAIN_CRNN_0.01/epoch{}_{}_{}".format(epoch, i, j), inputs[j],
+                utils.makeDirs(["TRAIN_CRNN_0.001"])
+                utils.imageOut("TRAIN_CRNN_0.001/epoch{}_{}_{}".format(epoch, i, j), inputs[j],
                                targets_denormalized[j], outputs_denormalized[j])
 
-        if lossL1viz < 10:
+        if lossL1viz < 0.003:
             torch.save(netG.state_dict(), prefix + "model")
 
     # VALIDATION
@@ -152,10 +154,10 @@ for epoch in range(epochs):
         targets_denormalized = data.denormalize(targets_cpu.cpu().numpy())
         outputs_denormalized = data.denormalize(outputs_cpu)
 
-        if lossL1viz < 0.01:
+        if lossL1viz < 0.001:
             for j in range(batch_size):
-                utils.makeDirs(["VALIDATION_CRNN_0.01"])
-                utils.imageOut("VALIDATION_CRNN_0.01/epoch{}_{}_{}".format(epoch, i, j), inputs[j],
+                utils.makeDirs(["VALIDATION_CRNN_0.001"])
+                utils.imageOut("VALIDATION_CRNN_0.001/epoch{}_{}_{}".format(epoch, i, j), inputs[j],
                                targets_denormalized[j], outputs_denormalized[j])
 
     L1_accum /= len(trainLoader)

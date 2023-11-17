@@ -145,16 +145,16 @@ class PressureDataset(Dataset):
             new_inputs.append(new_input_data)
             new_targets.append(new_target_data)
 
-        new_inputs = np.array(new_inputs)
-        new_targets = np.array(new_targets)
+        new_inputs = torch.stack(new_inputs)
+        new_targets = torch.stack(new_targets)
         return new_inputs, new_targets
 
     def extract_data(self):
         X = []
         y = []
         for i in range(self.totalLength - self.time_step):
-            X.append([a for a in self.new_inputs[i: (i + self.time_step)]])
-            y.append(self.new_targets[i + self.time_step])
+            X.append([a for a in self.new_inputs[i: (i + self.time_step)].numpy()])
+            y.append(self.new_targets[i + self.time_step].numpy())
 
         X = np.array(X)
         y = np.array(y)
