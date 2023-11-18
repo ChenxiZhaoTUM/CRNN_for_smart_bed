@@ -201,7 +201,7 @@ class TestPressureDataset(unittest.TestCase):
         self.pressure_dataset = PressureDataset()
 
     def test_getitem_shape(self):
-        idx = 0
+        idx = 0  # data index
         inputs_group, target_group = self.pressure_dataset[idx]
         self.assertEqual(inputs_group.shape, torch.Size([10, 12, 32, 64]))
         self.assertEqual(target_group.shape, torch.Size([1, 32, 64]))

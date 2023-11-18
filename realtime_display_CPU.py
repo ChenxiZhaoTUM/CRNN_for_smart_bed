@@ -43,8 +43,8 @@ def average_by_sec(time_arr, value_arr):
     return new_time_arr, avg_value_arr
 
 
-##### read output files #####
-def deal_with_csv_files(csv_file_path):
+##### read output file #####
+def deal_with_csv_file(csv_file_path):
     with open(csv_file_path, 'r', errors='ignore') as file:
         time_arr_csv = []
         value_arr_csv = []
@@ -78,8 +78,8 @@ def reshape_output_value(value_arr):
 
 
 ##### read input files #####
-def deal_with_txt_files(file_path):
-    with open(file_path, 'r', errors='ignore') as file:
+def deal_with_txt_file(txt_file_path):
+    with open(txt_file_path, 'r', errors='ignore') as file:
         lines = file.readlines()
 
         time_arr_txt = []
@@ -121,8 +121,8 @@ def deal_with_txt_files(file_path):
         return time_arr_txt, value_arr_txt
 
 
-def deal_with_sleep_txt_files(file_path):
-    with open(file_path, 'r', errors='ignore') as file:
+def deal_with_sleep_txt_file(sleep_txt_file_path):
+    with open(sleep_txt_file_path, 'r', errors='ignore') as file:
         lines = file.readlines()
 
         time_arr_sleep_txt = []
@@ -208,9 +208,9 @@ def save_data_from_files(isTest=False):
 
             print(file_name_without_extension)  # print available files
 
-            time_arr_txt, value_arr_txt = deal_with_txt_files(txt_file_path)
-            time_arr_sleep_txt, value_arr_sleep_txt = deal_with_sleep_txt_files(sleep_txt_file_path)
-            time_arr_csv, value_arr_csv = deal_with_csv_files(csv_file_path)
+            time_arr_txt, value_arr_txt = deal_with_txt_file(txt_file_path)
+            time_arr_sleep_txt, value_arr_sleep_txt = deal_with_sleep_txt_file(sleep_txt_file_path)
+            time_arr_csv, value_arr_csv = deal_with_csv_file(csv_file_path)
 
             # do time average
             avg_time_arr_txt, avg_value_arr_txt = average_by_sec(time_arr_txt, value_arr_txt)
