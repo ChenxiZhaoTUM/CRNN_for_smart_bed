@@ -111,7 +111,6 @@ def load_data_from_file(csv_file_path):
                 'target_data': new_target_data
             }
 
-    print()
     print(f"Number of data loaded of {filename_without_extension}:", len(common_data_in_single_file))
 
     return common_data_in_single_file
@@ -150,23 +149,9 @@ class PressureDataset(Dataset):
     TRAIN = 0
     TEST = 2
 
-    def __init__(self, mode=TRAIN, dataDir="./dataset/for_train/", dataDirTest="./dataset/for_test/", time_step=10):
-        if not (mode == self.TRAIN or mode == self.TEST):
-            print("Error - PressureDataset invalid mode " + format(mode))
-            exit(1)
-
-        self.mode = mode
-        self.dataDir = dataDir
-        self.dataDirTest = dataDirTest  # only for mode==self.TEST
+    def __init__(self, csv_files, time_step=10):
+        self.csv_files = csv_files
         self.time_step = time_step
-
-        # Load files incrementally based on mode
-        if mode == self.TRAIN:
-            self.csv_files = [os.path.join(self.dataDir, file) for file in os.listdir(dataDir) if file.endswith('.CSV')]
-        elif mode == self.TEST:
-            self.csv_files = [os.path.join(self.dataDirTest, file) for file in os.listdir(dataDirTest) if
-                              file.endswith('.CSV')]
-
         self.total_length = len(self.csv_files)
 
     def __len__(self):
@@ -178,15 +163,23 @@ class PressureDataset(Dataset):
         inputs_groups, target_groups = extract_data(common_data, self.time_step)
         return inputs_groups, target_groups
 
+    def denormalization(self, np_array):
+        target_max = 60
+        target_min = 0
+        denormalized_data = np_array * (target_max - target_min) + target_min
+
+        return denormalized_data
+
 
 class TestPressureDataset(unittest.TestCase):
     def setUp(self):
-        self.pressure_dataset = PressureDataset()
+        csv_files = ["./dataset/for_train/duchengsheng.CSV", "./dataset/for_train/hujiali.CSV"]
+        self.pressure_dataset = PressureDataset(csv_files)
 
     def test_getitem_shape(self):
-        idx = 0  # file index
+        file_idx = 0  # file index
         # Number of data loaded of duchengsheng: 554
-        inputs_groups, target_groups = self.pressure_dataset[idx]
+        inputs_groups, target_groups = self.pressure_dataset[file_idx]
         self.assertEqual(inputs_groups.shape, torch.Size([544, 10, 12, 32, 64]))
         self.assertEqual(target_groups.shape, torch.Size([544, 1, 32, 64]))
 

@@ -6,7 +6,6 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
-
 import data_preprocessing_for_CRNN as dp
 import utils
 from CnnEncoder_RNN_CnnDecoder import weights_init, CRNN
@@ -24,8 +23,6 @@ lrG = 0.0006
 decayLr = True
 # channel exponent to control network size
 expo = 3
-# data set config
-prop = None  # by default, use all from "./dataset/for_train"
 # save txt files with per epoch loss?
 saveL1 = True
 # add Dropout2d layer?
