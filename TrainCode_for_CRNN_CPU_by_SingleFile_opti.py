@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.autograd import Variable
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, ConcatDataset, Subset
 from sklearn.model_selection import train_test_split
 import single_file_data_preprocessing as dp
 from CnnEncoder_RNN_CnnDecoder import weights_init, CRNN
@@ -57,6 +57,18 @@ torch.manual_seed(seed)
 ##### create pytorch data object with dataset #####
 # train, vali split
 train_files, vali_files = train_test_split(csv_files, test_size=0.2, random_state=42)
+full_train_dataset = ConcatDataset([dp.PressureDataset(train_file) for train_file in train_files])
+# train_loaders = [DataLoader(Subset(full_train_dataset, indices=[i]), batch_size=batch_size, shuffle=True, drop_last=True)
+#                  for i in range(len(train_files))]
+dataloader = DataLoader(full_train_dataset, batch_size=50, shuffle=True, drop_last=True)
+train_loaders = [(Subset(dataloader, indices=[i])) for i in range(len(train_files))]
+
+full_vali_dataset = ConcatDataset([dp.PressureDataset(vali_file) for vali_file in vali_files])
+vali_loaders = [DataLoader(Subset(full_vali_dataset, indices=[i]), batch_size=batch_size, shuffle=False, drop_last=True)
+                 for i in range(len(vali_files))]
+
+for i, subset in enumerate(train_loaders):
+    print(f"Subset {i} size: {len(subset)}")
 
 ##### setup training #####
 epochs = iterations
@@ -88,10 +100,7 @@ for epoch in range(epochs):
     L1_accum = 0.0
     train_times = 0
 
-    random.shuffle(train_files)
-    for train_file in train_files:
-        train_set = dp.PressureDataset(train_file)
-        trainLoader = DataLoader(train_set, batch_size=batch_size, shuffle=True, drop_last=True)
+    for trainLoader in train_loaders:
         print("Training batches: {}".format(len(trainLoader)))
 
         for batch_idx, traindata in enumerate(trainLoader, 0):
@@ -128,8 +137,8 @@ for epoch in range(epochs):
                 logline = "Epoch: {}, batch-idx: {}, L1: {}\n".format(epoch, batch_idx, lossL1viz)
                 print(logline)
 
-            targets_denormalized = train_set.denormalize(target_groups.cpu().numpy())
-            outputs_denormalized = train_set.denormalize(gen_out_cpu)
+            targets_denormalized = train_loaders.denormalize(target_groups.cpu().numpy())
+            outputs_denormalized = train_loaders.denormalize(gen_out_cpu)
 
             if lossL1viz < 1:
                 for j in range(batch_size):
@@ -146,10 +155,7 @@ for epoch in range(epochs):
     netG.eval()
     L1val_accum = 0.0
 
-    random.shuffle(vali_files)
-    for vali_file in vali_files:
-        vali_set = dp.PressureDataset(vali_file)
-        valiLoader = DataLoader(vali_set, batch_size=batch_size, shuffle=False, drop_last=True)
+    for valiLoader in vali_loaders:
         print("Validation batches: {}".format(len(valiLoader)))
 
         for batch_idx, validata in enumerate(valiLoader, 0):
@@ -163,8 +169,8 @@ for epoch in range(epochs):
             lossL1 = criterionL1(outputs, targets)
             L1val_accum += lossL1.item()
 
-            targets_denormalized = vali_set.denormalize(target_groups.cpu().numpy())
-            outputs_denormalized = vali_set.denormalize(outputs_cpu)
+            targets_denormalized = vali_loaders.denormalize(target_groups.cpu().numpy())
+            outputs_denormalized = vali_loaders.denormalize(outputs_cpu)
 
             if lossL1viz < 1:
                 for j in range(batch_size):
