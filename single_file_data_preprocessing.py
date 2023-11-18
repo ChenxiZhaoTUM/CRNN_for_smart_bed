@@ -146,24 +146,20 @@ def extract_data(common_data_in_single_file, time_step):
 
 
 class PressureDataset(Dataset):
-    TRAIN = 0
-    TEST = 2
-
-    def __init__(self, csv_files, time_step=10):
-        self.csv_files = csv_files
+    def __init__(self, csv_file_path, time_step=10):
+        self.csv_file_path = csv_file_path
         self.time_step = time_step
-        self.total_length = len(self.csv_files)
+        self.common_data_in_single_file = load_data_from_file(self.csv_file_path)
+        self.inputs_groups, self.target_groups = extract_data(self.common_data_in_single_file, self.time_step)
+        self.total_length = len(self.inputs_groups)
 
     def __len__(self):
         return self.total_length
 
     def __getitem__(self, idx):
-        csv_file_path = self.csv_files[idx]
-        common_data = load_data_from_file(csv_file_path)
-        inputs_groups, target_groups = extract_data(common_data, self.time_step)
-        return inputs_groups, target_groups
+        return self.inputs_groups[idx], self.target_groups[idx]
 
-    def denormalization(self, np_array):
+    def denormalize(self, np_array):
         target_max = 60
         target_min = 0
         denormalized_data = np_array * (target_max - target_min) + target_min
@@ -173,15 +169,14 @@ class PressureDataset(Dataset):
 
 class TestPressureDataset(unittest.TestCase):
     def setUp(self):
-        csv_files = ["./dataset/for_train/duchengsheng.CSV", "./dataset/for_train/hujiali.CSV"]
-        self.pressure_dataset = PressureDataset(csv_files)
+        self.pressure_dataset = PressureDataset("./dataset/for_train/duchengsheng.CSV")
 
     def test_getitem_shape(self):
-        file_idx = 0  # file index
+        data_idx = 0  # file index
         # Number of data loaded of duchengsheng: 554
-        inputs_groups, target_groups = self.pressure_dataset[file_idx]
-        self.assertEqual(inputs_groups.shape, torch.Size([544, 10, 12, 32, 64]))
-        self.assertEqual(target_groups.shape, torch.Size([544, 1, 32, 64]))
+        inputs_group, target_group = self.pressure_dataset[data_idx]
+        self.assertEqual(inputs_group.shape, torch.Size([10, 12, 32, 64]))
+        self.assertEqual(target_group.shape, torch.Size([1, 32, 64]))
 
 
 if __name__ == '__main__':

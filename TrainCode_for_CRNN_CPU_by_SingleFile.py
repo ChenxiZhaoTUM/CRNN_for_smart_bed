@@ -22,8 +22,7 @@ csv_files = [os.path.join(dataDir, file) for file in os.listdir(dataDir) if file
 # number of training iterations
 iterations = 10000000
 # batch size
-batch_size = 1  # notice that here must be 1
-# (because number of samples in files are different, DataLoader is forbidden)
+batch_size = 30
 # time step
 time_step = 10
 # learning rate
@@ -32,8 +31,6 @@ lrG = 0.0006
 decayLr = True
 # channel exponent to control network size
 expo = 3
-# data set config
-prop = None  # by default, use all from "./dataset/for_train"
 # save txt files with per epoch loss?
 saveL1 = True
 # add Dropout2d layer?
@@ -60,28 +57,9 @@ torch.manual_seed(seed)
 ##### create pytorch data object with dataset #####
 # train, vali split
 train_files, vali_files = train_test_split(csv_files, test_size=0.2, random_state=42)
-train_set = dp.PressureDataset(train_files)
-vali_set = dp.PressureDataset(vali_files)
-# data loading params, batch_size represents number of files
-trainLoader = DataLoader(train_set, batch_size=batch_size, shuffle=True, drop_last=True)
-valiLoader = DataLoader(vali_set, batch_size=batch_size, shuffle=True, drop_last=True)
-print("Training batches: {}".format(len(trainLoader)))
-print("Validation batches: {}".format(len(valiLoader)))
-print()
-""" 
-test code
-inputs_groups, target_groups = train_set[0]
-print(inputs_groups.shape)
-print(target_groups.shape)
-
-The operating file: wubing_ry
-Number of data loaded of wubing_ry: 602
-(592, 10, 12, 32, 64)
-(592, 1, 32, 64)
-"""
 
 ##### setup training #####
-epochs = int(iterations / len(trainLoader) + 0.5)
+epochs = iterations
 netG = CRNN(channelExponent=expo, dropout=dropout)
 print(netG)  # print full net
 model_parameters = filter(lambda p: p.requires_grad, netG.parameters())
@@ -98,6 +76,9 @@ if len(doLoad) > 0:
 criterionL1 = nn.L1Loss()
 optimizerG = optim.Adam(netG.parameters(), lr=lrG, betas=(0.5, 0.999), weight_decay=0.0)
 
+inputs = Variable(torch.FloatTensor(batch_size, time_step, 12, 32, 64))
+targets = Variable(torch.FloatTensor(batch_size, 1, 32, 64))
+
 ##### training begins #####
 for epoch in range(epochs):
     print("Starting epoch {} / {}".format((epoch + 1), epochs))
@@ -105,23 +86,26 @@ for epoch in range(epochs):
     # TRAIN
     netG.train()
     L1_accum = 0.0
-    for batch_idx, traindata in enumerate(trainLoader, 0):
-        print(f"batch_idx: {batch_idx}")
-        input_files_in_one_batch, target_files_in_one_batch = traindata  # in one batch (i.e. batch_size)
+    train_times = 0
 
-        for file_idx in range(len(input_files_in_one_batch)):  # only one file, file_idx==0
-            inputs_groups = input_files_in_one_batch[file_idx]  # data pairs in one file
-            target_groups = target_files_in_one_batch[file_idx]
+    random.shuffle(train_files)
+    for train_file in train_files:
+        train_set = dp.PressureDataset(train_file)
+        trainLoader = DataLoader(train_set, batch_size=batch_size, shuffle=True, drop_last=True)
+        print("Training batches: {}".format(len(trainLoader)))
+
+        for batch_idx, traindata in enumerate(trainLoader, 0):
+            inputs_groups, target_groups = traindata
+
             # test code
-            # print(inputs_groups.size())  # torch.Size([544, 10, 12, 32, 64])
-            # print(target_groups.size())  # torch.Size([544, 1, 32, 64])
+            # print(f"batch_idx: {batch_idx}")
+            # print(inputs_groups.size())  # torch.Size([50, 10, 12, 32, 64])
+            # print(target_groups.size())  # torch.Size([50, 1, 32, 64])
 
-            inputs = Variable(torch.FloatTensor(inputs_groups.size(0), time_step, 12, 32, 64))
-            targets = Variable(torch.FloatTensor(inputs_groups.size(0), 1, 32, 64))
             inputs.data.copy_(inputs_groups.float())
             targets.data.copy_(target_groups.float())
 
-             # compute LR decay
+            # compute LR decay
             if decayLr:
                 currLr = utils.computeLR(epoch, epochs, lrG * 0.1, lrG)
                 if currLr < lrG:
@@ -140,23 +124,58 @@ for epoch in range(epochs):
             lossL1viz = lossL1.item()
             L1_accum += lossL1viz
 
-            targets_denormalized = train_set.denormalize(inputs_groups.cpu().numpy())
+            if batch_idx == len(trainLoader) - 1:
+                logline = "Epoch: {}, batch-idx: {}, L1: {}\n".format(epoch, batch_idx, lossL1viz)
+                print(logline)
+
+            targets_denormalized = train_set.denormalize(target_groups.cpu().numpy())
             outputs_denormalized = train_set.denormalize(gen_out_cpu)
 
-            if lossL1viz < 0.002:
+            if lossL1viz < 1:
                 for j in range(batch_size):
-                    utils.makeDirs(["TRAIN_CRNN_0.002"])
-                    utils.imageOut("TRAIN_CRNN_0.002/epoch{}_{}_{}".format(epoch, i, j), inputs[j],
+                    utils.makeDirs(["TRAIN_CRNN_1"])
+                    utils.imageOut("TRAIN_CRNN_1/epoch{}_{}_{}".format(epoch, batch_idx, j), inputs[j],
                                    targets_denormalized[j], outputs_denormalized[j])
 
-            if lossL1viz < 0.004:
+            if lossL1viz < 1:
                 torch.save(netG.state_dict(), prefix + "model")
 
-        if batch_idx == len(trainLoader) - 1:
-            logline = "Epoch: {}, batch-idx: {}, L1: {}\n".format(epoch, batch_idx, lossL1viz)
-            print(logline)
+            train_times += 1
 
+    # VALIDATION
+    netG.eval()
+    L1val_accum = 0.0
 
+    random.shuffle(vali_files)
+    for vali_file in vali_files:
+        vali_set = dp.PressureDataset(vali_file)
+        valiLoader = DataLoader(vali_set, batch_size=batch_size, shuffle=False, drop_last=True)
+        print("Validation batches: {}".format(len(valiLoader)))
 
+        for batch_idx, validata in enumerate(valiLoader, 0):
+            inputs_groups, target_groups = traindata
+            inputs.data.copy_(inputs_groups.float())
+            targets.data.copy_(target_groups.float())
 
+            outputs = netG(inputs)
+            outputs_cpu = outputs.data.cpu().numpy()
 
+            lossL1 = criterionL1(outputs, targets)
+            L1val_accum += lossL1.item()
+
+            targets_denormalized = vali_set.denormalize(target_groups.cpu().numpy())
+            outputs_denormalized = vali_set.denormalize(outputs_cpu)
+
+            if lossL1viz < 1:
+                for j in range(batch_size):
+                    utils.makeDirs(["VALIDATION_CRNN_1"])
+                    utils.imageOut("VALIDATION_CRNN_1/epoch{}_{}_{}".format(epoch, batch_idx, j), inputs[j],
+                                   targets_denormalized[j], outputs_denormalized[j])
+
+    L1_accum /= train_times
+    if saveL1:
+        if epoch == 0:
+            utils.resetLog(prefix + "L1.txt")
+            utils.resetLog(prefix + "L1val.txt")
+        utils.log(prefix + "L1.txt", "{} ".format(L1_accum), False)
+        utils.log(prefix + "L1val.txt", "{} ".format(L1val_accum), False)
