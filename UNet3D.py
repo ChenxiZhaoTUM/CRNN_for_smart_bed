@@ -111,6 +111,8 @@ class UNet3D(nn.Module):
 
         dout1 = self.dlayer1(dout2_out1)  # torch.Size([20, 1, 1, 32, 64])
 
+        dout1 = dout1.squeeze(1)
+
         return dout1
 
 
@@ -118,4 +120,4 @@ if __name__ == "__main__":
     input_tensor = torch.randn(20, 10, 12, 32, 64)  # (batch_size, time_step, channels, height, width)
     model = UNet3D()
     output_tensor = model(input_tensor)
-    print(output_tensor.size())  # torch.Size([20, 1, 1, 32, 64])
+    print(output_tensor.size())  # torch.Size([20, 1, 32, 64])

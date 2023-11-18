@@ -122,13 +122,13 @@ for epoch in range(epochs):
         targets_denormalized = data.denormalize(targets_cpu.cpu().numpy())
         outputs_denormalized = data.denormalize(gen_out_cpu)
 
-        if lossL1viz < 0.001:
+        if lossL1viz < 0.002:
             for j in range(batch_size):
-                utils.makeDirs(["TRAIN_CRNN_0.001"])
-                utils.imageOut("TRAIN_CRNN_0.001/epoch{}_{}_{}".format(epoch, i, j), inputs[j],
+                utils.makeDirs(["TRAIN_CRNN_0.002"])
+                utils.imageOut("TRAIN_CRNN_0.002/epoch{}_{}_{}".format(epoch, i, j), inputs[j],
                                targets_denormalized[j], outputs_denormalized[j])
 
-        if lossL1viz < 0.003:
+        if lossL1viz < 0.004:
             torch.save(netG.state_dict(), prefix + "model")
 
     # VALIDATION
@@ -154,10 +154,10 @@ for epoch in range(epochs):
         targets_denormalized = data.denormalize(targets_cpu.cpu().numpy())
         outputs_denormalized = data.denormalize(outputs_cpu)
 
-        if lossL1viz < 0.001:
+        if lossL1viz < 0.004:
             for j in range(batch_size):
-                utils.makeDirs(["VALIDATION_CRNN_0.001"])
-                utils.imageOut("VALIDATION_CRNN_0.001/epoch{}_{}_{}".format(epoch, i, j), inputs[j],
+                utils.makeDirs(["VALIDATION_CRNN_0.004"])
+                utils.imageOut("VALIDATION_CRNN_0.004/epoch{}_{}_{}".format(epoch, i, j), inputs[j],
                                targets_denormalized[j], outputs_denormalized[j])
 
     L1_accum /= len(trainLoader)

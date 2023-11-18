@@ -64,7 +64,7 @@ class CnnEncoder_ConvLSTM(nn.Module):
         self.layer5 = blockUNet(channels * 4, channels * 8, 'layer5', transposed=False, bn=True, relu=False,
                                 dropout=dropout, size=(2, 3), pad=0)
 
-        self.dlayer5 = ConvLSTM(channels * 8, channels * 4, (4, 4), 1, True, True, False, False)
+        self.convlstm = ConvLSTM(channels * 8, channels * 4, (4, 4), 1, True, True, False, False)
         # input_channel, output_channel, kernel_size(3, 3), num_layers, batch_first, bias, return_all_layers, only_last_time
 
     def forward(self, x_3d):
@@ -80,7 +80,7 @@ class CnnEncoder_ConvLSTM(nn.Module):
             cnn_embed_seq.append(out5)
 
         cnn_embed_seq = torch.stack(cnn_embed_seq, dim=0).transpose_(0, 1)  # torch.Size([20, 10, 64, 1, 2])
-        dout5, _ = self.dlayer5(cnn_embed_seq)  # torch.Size([20, 10, 32, 1, 2])
+        dout5, _ = self.convlstm(cnn_embed_seq)  # torch.Size([20, 10, 32, 1, 2])
         out4 = out4.unsqueeze(1)  # torch.Size([20, 1, 32, 2, 4])
         # dout5_out4 = torch.cat([dout5[-1], out4], 1)
 
