@@ -81,6 +81,7 @@ targets = Variable(torch.FloatTensor(batch_size, 1, 32, 64))
 
 ##### training begins #####
 for epoch in range(epochs):
+    print()
     print("Starting epoch {} / {}".format((epoch + 1), epochs))
 
     # TRAIN
@@ -125,19 +126,19 @@ for epoch in range(epochs):
             L1_accum += lossL1viz
 
             if batch_idx == len(trainLoader) - 1:
-                logline = "Epoch: {}, batch-idx: {}, L1: {}\n".format(epoch, batch_idx, lossL1viz)
+                logline = "Epoch: {}, batch-idx: {}, L1: {}".format(epoch, batch_idx, lossL1viz)
                 print(logline)
 
             targets_denormalized = train_set.denormalize(target_groups.cpu().numpy())
             outputs_denormalized = train_set.denormalize(gen_out_cpu)
 
-            if lossL1viz < 1:
+            if lossL1viz < 0.005:
                 for j in range(batch_size):
-                    utils.makeDirs(["TRAIN_CRNN_1"])
-                    utils.imageOut("TRAIN_CRNN_1/epoch{}_{}_{}".format(epoch, batch_idx, j), inputs_groups[j],
+                    utils.makeDirs(["TRAIN_CRNN_0.005"])
+                    utils.imageOut("TRAIN_CRNN_0.005/epoch{}_{}_{}".format(epoch, batch_idx, j), inputs_groups[j],
                                    targets_denormalized[j], outputs_denormalized[j])
 
-            if lossL1viz < 1:
+            if lossL1viz < 0.01:
                 torch.save(netG.state_dict(), prefix + "model")
 
             train_times += 1
@@ -145,6 +146,7 @@ for epoch in range(epochs):
     # VALIDATION
     netG.eval()
     L1val_accum = 0.0
+    vali_times = 0
 
     random.shuffle(vali_files)
     for vali_file in vali_files:
@@ -166,13 +168,16 @@ for epoch in range(epochs):
             targets_denormalized = vali_set.denormalize(target_groups.cpu().numpy())
             outputs_denormalized = vali_set.denormalize(outputs_cpu)
 
-            if lossL1viz < 1:
+            if lossL1viz < 0.005:
                 for j in range(batch_size):
-                    utils.makeDirs(["VALIDATION_CRNN_1"])
-                    utils.imageOut("VALIDATION_CRNN_1/epoch{}_{}_{}".format(epoch, batch_idx, j), inputs_groups[j],
+                    utils.makeDirs(["VALIDATION_CRNN_0.005"])
+                    utils.imageOut("VALIDATION_CRNN_0.005/epoch{}_{}_{}".format(epoch, batch_idx, j), inputs_groups[j],
                                    targets_denormalized[j], outputs_denormalized[j])
 
+            vali_times += 1
+
     L1_accum /= train_times
+    L1val_accum /= vali_times
     if saveL1:
         if epoch == 0:
             utils.resetLog(prefix + "L1.txt")
