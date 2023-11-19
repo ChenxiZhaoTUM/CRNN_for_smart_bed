@@ -159,7 +159,7 @@ for epoch in range(epochs):
         print("Validation batches: {}".format(len(valiLoader)))
 
         for batch_idx, validata in enumerate(valiLoader, 0):
-            inputs_groups, target_groups = traindata
+            inputs_groups, target_groups = validata
             inputs.data.copy_(inputs_groups.float())
             targets.data.copy_(target_groups.float())
 
