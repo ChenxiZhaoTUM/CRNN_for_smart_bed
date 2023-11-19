@@ -140,7 +140,7 @@ for epoch in range(epochs):
             if lossL1viz < 1:
                 for j in range(batch_size):
                     utils.makeDirs(["TRAIN_CRNN_1"])
-                    utils.imageOut("TRAIN_CRNN_1/epoch{}_{}_{}".format(epoch, batch_idx, j), inputs[j],
+                    utils.imageOut("TRAIN_CRNN_1/epoch{}_{}_{}".format(epoch, batch_idx, j), inputs_groups[j],
                                    targets_denormalized[j], outputs_denormalized[j])
 
             if lossL1viz < 1:
@@ -177,7 +177,7 @@ for epoch in range(epochs):
             if lossL1viz < 1:
                 for j in range(batch_size):
                     utils.makeDirs(["VALIDATION_CRNN_1"])
-                    utils.imageOut("VALIDATION_CRNN_1/epoch{}_{}_{}".format(epoch, batch_idx, j), inputs[j],
+                    utils.imageOut("VALIDATION_CRNN_1/epoch{}_{}_{}".format(epoch, batch_idx, j), inputs_groups[j],
                                    targets_denormalized[j], outputs_denormalized[j])
 
     L1_accum /= train_times
