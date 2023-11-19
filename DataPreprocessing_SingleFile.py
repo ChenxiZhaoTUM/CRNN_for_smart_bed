@@ -54,7 +54,7 @@ def loader_normalizer(inputs_pressure_arr, targets_arr):
 ##### save common data from file by file #####
 def load_data_from_file(csv_file_path):
     filename_without_extension = os.path.splitext(os.path.basename(csv_file_path))[0]
-    print(f"The operating file: {filename_without_extension}")
+    # print(f"The operating file: {filename_without_extension}")
 
     txt_file_path = os.path.join(os.path.dirname(csv_file_path), f"{filename_without_extension}.txt")
     if not os.path.isfile(txt_file_path):
@@ -110,7 +110,7 @@ def load_data_from_file(csv_file_path):
                 'target_data': new_target_data
             }
 
-    print(f"Number of data loaded of {filename_without_extension}:", len(common_data_in_single_file))
+    # print(f"Number of data loaded of {filename_without_extension}:", len(common_data_in_single_file))
 
     return common_data_in_single_file
 

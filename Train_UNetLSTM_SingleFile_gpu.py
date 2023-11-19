@@ -6,16 +6,16 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.autograd import Variable
-from torch.utils.data import DataLoader, ConcatDataset, Subset
+from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
-import single_file_data_preprocessing as dp
-from CnnEncoder_RNN_CnnDecoder import weights_init, CRNN
+import DataPreprocessing_SingleFile as dp
+from UNet_ConvLSTM import weights_init, UNet_ConvLSTM
 import utils
 
 ##### detect devices and load files #####
 use_cuda = torch.cuda.is_available()  # check if GPU exists
 device = torch.device("cuda" if use_cuda else "cpu")  # use CPU or GPU
-dataDir = "./dataset/for_train"
+dataDir = "/home/yyc/chenxi/CRNN_for_smart_bed/dataset/for_train"
 csv_files = [os.path.join(dataDir, file) for file in os.listdir(dataDir) if file.endswith('.CSV')]
 
 ##### basic settings #####
@@ -36,12 +36,12 @@ saveL1 = True
 # add Dropout2d layer?
 dropout = 0
 
-prefix = "CRNN_01_"
+prefix = "UNetLSTM_01_"
 if len(sys.argv) > 1:
     prefix = sys.argv[1]
     print("Output prefix: {}".format(prefix))
 
-doLoad = "CRNN_01_model"  # optional, path to pre-trained model
+doLoad = ""  # optional, path to pre-trained model
 
 print("LR: {}".format(lrG))
 print("LR decay: {}".format(decayLr))
@@ -57,31 +57,31 @@ torch.manual_seed(seed)
 ##### create pytorch data object with dataset #####
 # train, vali split
 train_files, vali_files = train_test_split(csv_files, test_size=0.2, random_state=42)
-full_train_dataset = ConcatDataset([dp.PressureDataset(train_file) for train_file in train_files])
-# train_loaders = [DataLoader(Subset(full_train_dataset, indices=[i]), batch_size=batch_size, shuffle=True, drop_last=True)
-#                  for i in range(len(train_files))]
-full_vali_dataset = ConcatDataset([dp.PressureDataset(vali_file) for vali_file in vali_files])
 
 ##### setup training #####
 epochs = iterations
-netG = CRNN(channelExponent=expo, dropout=dropout)
+netG = UNet_ConvLSTM(channelExponent=expo, dropout=dropout)
 print(netG)  # print full net
 model_parameters = filter(lambda p: p.requires_grad, netG.parameters())
 params = sum([np.prod(p.size()) for p in model_parameters])
-print("Initialized CRNN with {} trainable params ".format(params))
+print("Initialized UNetLSTM with {} trainable params ".format(params))
 print()
 
 netG.apply(weights_init)
 if len(doLoad) > 0:
-    # netG.load_state_dict(torch.load(doLoad))
-    netG.load_state_dict(torch.load(doLoad, map_location=torch.device('cpu')))
+    netG.load_state_dict(torch.load(doLoad))
+    # netG.load_state_dict(torch.load(doLoad, map_location=torch.device('cpu')))
     print("Loaded model " + doLoad)
+netG.cuda()
 
 criterionL1 = nn.L1Loss()
 optimizerG = optim.Adam(netG.parameters(), lr=lrG, betas=(0.5, 0.999), weight_decay=0.0)
+criterionL1.cuda()
 
 inputs = Variable(torch.FloatTensor(batch_size, time_step, 12, 32, 64))
 targets = Variable(torch.FloatTensor(batch_size, 1, 32, 64))
+inputs = inputs.cuda()
+targets = targets.cuda()
 
 ##### training begins #####
 for epoch in range(epochs):
@@ -93,10 +93,9 @@ for epoch in range(epochs):
     train_times = 0
 
     random.shuffle(train_files)
-    for file_idx, train_file in enumerate(train_files):
-        subset = Subset(full_train_dataset, indices=[file_idx])
-        print(f"Subset {file_idx} size: {len(subset)}")
-        trainLoader = DataLoader(subset, batch_size=batch_size, shuffle=True, drop_last=True)
+    for train_file in train_files:
+        train_set = dp.PressureDataset(train_file)
+        trainLoader = DataLoader(train_set, batch_size=batch_size, shuffle=True, drop_last=True)
         print("Training batches: {}".format(len(trainLoader)))
 
         for batch_idx, traindata in enumerate(trainLoader, 0):
@@ -107,8 +106,10 @@ for epoch in range(epochs):
             # print(inputs_groups.size())  # torch.Size([50, 10, 12, 32, 64])
             # print(target_groups.size())  # torch.Size([50, 1, 32, 64])
 
-            inputs.data.copy_(inputs_groups.float())
-            targets.data.copy_(target_groups.float())
+            inputs_cpu = inputs_groups.float().cuda()
+            targets_cpu = target_groups.float().cuda()
+            inputs.data.resize_as_(inputs_cpu).copy_(inputs_cpu)
+            targets.data.resize_as_(targets_cpu).copy_(targets_cpu)
 
             # compute LR decay
             if decayLr:
@@ -133,13 +134,13 @@ for epoch in range(epochs):
                 logline = "Epoch: {}, batch-idx: {}, L1: {}\n".format(epoch, batch_idx, lossL1viz)
                 print(logline)
 
-            targets_denormalized = trainLoader.denormalize(target_groups.cpu().numpy())
-            outputs_denormalized = trainLoader.denormalize(gen_out_cpu)
+            targets_denormalized = train_set.denormalize(target_groups.cpu().numpy())
+            outputs_denormalized = train_set.denormalize(gen_out_cpu)
 
             if lossL1viz < 1:
                 for j in range(batch_size):
-                    utils.makeDirs(["TRAIN_CRNN_1"])
-                    utils.imageOut("TRAIN_CRNN_1/epoch{}_{}_{}".format(epoch, batch_idx, j), inputs[j],
+                    utils.makeDirs(["TRAIN_UNetLSTM_1"])
+                    utils.imageOut("TRAIN_UNetLSTM_1/epoch{}_{}_{}".format(epoch, batch_idx, j), inputs[j],
                                    targets_denormalized[j], outputs_denormalized[j])
 
             if lossL1viz < 1:
@@ -152,16 +153,17 @@ for epoch in range(epochs):
     L1val_accum = 0.0
 
     random.shuffle(vali_files)
-    for file_idx, vali_file in enumerate(vali_files):
-        subset = Subset(full_vali_dataset, indices=[file_idx])
-        print(f"Subset {file_idx} size: {len(subset)}")
-        valiLoader = DataLoader(subset, batch_size=batch_size, shuffle=False, drop_last=True)
+    for vali_file in vali_files:
+        vali_set = dp.PressureDataset(vali_file)
+        valiLoader = DataLoader(vali_set, batch_size=batch_size, shuffle=False, drop_last=True)
         print("Validation batches: {}".format(len(valiLoader)))
 
         for batch_idx, validata in enumerate(valiLoader, 0):
             inputs_groups, target_groups = validata
-            inputs.data.copy_(inputs_groups.float())
-            targets.data.copy_(target_groups.float())
+            inputs_cpu = inputs_groups.float().cuda()
+            targets_cpu = target_groups.float().cuda()
+            inputs.data.resize_as_(inputs_cpu).copy_(inputs_cpu)
+            targets.data.resize_as_(targets_cpu).copy_(targets_cpu)
 
             outputs = netG(inputs)
             outputs_cpu = outputs.data.cpu().numpy()
@@ -169,13 +171,13 @@ for epoch in range(epochs):
             lossL1 = criterionL1(outputs, targets)
             L1val_accum += lossL1.item()
 
-            targets_denormalized = valiLoader.denormalize(target_groups.cpu().numpy())
-            outputs_denormalized = valiLoader.denormalize(outputs_cpu)
+            targets_denormalized = vali_set.denormalize(target_groups.cpu().numpy())
+            outputs_denormalized = vali_set.denormalize(outputs_cpu)
 
             if lossL1viz < 1:
                 for j in range(batch_size):
-                    utils.makeDirs(["VALIDATION_CRNN_1"])
-                    utils.imageOut("VALIDATION_CRNN_1/epoch{}_{}_{}".format(epoch, batch_idx, j), inputs[j],
+                    utils.makeDirs(["VALIDATION_UNetLSTM_1"])
+                    utils.imageOut("VALIDATION_UNetLSTM_1/epoch{}_{}_{}".format(epoch, batch_idx, j), inputs[j],
                                    targets_denormalized[j], outputs_denormalized[j])
 
     L1_accum /= train_times
