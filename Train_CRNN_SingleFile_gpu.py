@@ -85,6 +85,7 @@ targets = targets.cuda()
 
 ##### training begins #####
 for epoch in range(epochs):
+    print()
     print("Starting epoch {} / {}".format((epoch + 1), epochs))
 
     # TRAIN
@@ -151,6 +152,7 @@ for epoch in range(epochs):
     # VALIDATION
     netG.eval()
     L1val_accum = 0.0
+    vali_times = 0
 
     random.shuffle(vali_files)
     for vali_file in vali_files:
@@ -179,8 +181,11 @@ for epoch in range(epochs):
                     utils.makeDirs(["VALIDATION_CRNN_1"])
                     utils.imageOut("VALIDATION_CRNN_1/epoch{}_{}_{}".format(epoch, batch_idx, j), inputs_groups[j],
                                    targets_denormalized[j], outputs_denormalized[j])
+                    
+            vali_times += 1
 
     L1_accum /= train_times
+    L1val_accum /= vali_times
     if saveL1:
         if epoch == 0:
             utils.resetLog(prefix + "L1.txt")

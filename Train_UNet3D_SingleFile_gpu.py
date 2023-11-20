@@ -85,12 +85,14 @@ targets = targets.cuda()
 
 ##### training begins #####
 for epoch in range(epochs):
+    print()
     print("Starting epoch {} / {}".format((epoch + 1), epochs))
 
     # TRAIN
     netG.train()
     L1_accum = 0.0
     train_times = 0
+    vali_times = 0
 
     random.shuffle(train_files)
     for train_file in train_files:
@@ -131,19 +133,19 @@ for epoch in range(epochs):
             L1_accum += lossL1viz
 
             if batch_idx == len(trainLoader) - 1:
-                logline = "Epoch: {}, batch-idx: {}, L1: {}\n".format(epoch, batch_idx, lossL1viz)
+                logline = "Epoch: {}, batch-idx: {}, L1: {}".format(epoch, batch_idx, lossL1viz)
                 print(logline)
 
             targets_denormalized = train_set.denormalize(target_groups.cpu().numpy())
             outputs_denormalized = train_set.denormalize(gen_out_cpu)
 
-            if lossL1viz < 1:
+            if lossL1viz < 0.005:
                 for j in range(batch_size):
-                    utils.makeDirs(["TRAIN_UNet3D_1"])
-                    utils.imageOut("TRAIN_UNet3D_1/epoch{}_{}_{}".format(epoch, batch_idx, j), inputs_groups[j],
+                    utils.makeDirs(["TRAIN_UNet3D_0.005"])
+                    utils.imageOut("TRAIN_UNet3D_0.005/epoch{}_{}_{}".format(epoch, batch_idx, j), inputs_groups[j],
                                    targets_denormalized[j], outputs_denormalized[j])
 
-            if lossL1viz < 1:
+            if lossL1viz < 0.01:
                 torch.save(netG.state_dict(), prefix + "model")
 
             train_times += 1
@@ -174,13 +176,16 @@ for epoch in range(epochs):
             targets_denormalized = vali_set.denormalize(target_groups.cpu().numpy())
             outputs_denormalized = vali_set.denormalize(outputs_cpu)
 
-            if lossL1viz < 1:
+            if lossL1viz < 0.005:
                 for j in range(batch_size):
-                    utils.makeDirs(["VALIDATION_UNet3D_1"])
-                    utils.imageOut("VALIDATION_UNet3D_1/epoch{}_{}_{}".format(epoch, batch_idx, j), inputs_groups[j],
+                    utils.makeDirs(["VALIDATION_UNet3D_0.005"])
+                    utils.imageOut("VALIDATION_UNet3D_0.005/epoch{}_{}_{}".format(epoch, batch_idx, j), inputs_groups[j],
                                    targets_denormalized[j], outputs_denormalized[j])
+                    
+            vali_times += 1
 
     L1_accum /= train_times
+    L1val_accum /= vali_times
     if saveL1:
         if epoch == 0:
             utils.resetLog(prefix + "L1.txt")
