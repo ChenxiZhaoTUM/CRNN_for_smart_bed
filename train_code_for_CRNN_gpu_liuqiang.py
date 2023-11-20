@@ -64,7 +64,7 @@ params = sum([np.prod(p.size()) for p in model_parameters])
 print("Initialized CRNN with {} trainable params ".format(params))
 print()
 
-#netG.apply(weights_init)
+# netG.apply(weights_init)
 if len(doLoad) > 0:
     # netG.load_state_dict(torch.load(doLoad))
     netG.load_state_dict(torch.load(doLoad, map_location=torch.device('cpu')))
@@ -72,7 +72,7 @@ if len(doLoad) > 0:
 netG.cuda()
 
 criterionL1 = nn.L1Loss()
-#criterionL1.cuda()
+# criterionL1.cuda()
 optimizerG = optim.Adam(netG.parameters(), lr=lrG, weight_decay=0.0)
 
 ##### training begins #####
@@ -83,18 +83,18 @@ for epoch in range(epochs):
     netG.train()
     L1_accum = 0.0
     for i, traindata in enumerate(trainLoader, 0):
-        inputs, targets = traindata
-        inputs,targets=inputs.cuda(),targets.cuda()
+        inputs_cpu, targets_cpu = traindata
+        inputs, targets = inputs_cpu.cuda(), targets_cpu.cuda()
 
         # test code
         # print(i)
         # print(inputs_cpu.size())  # torch.Size([50, 10, 12, 32, 64])
         # print(targets_cpu.size())  # torch.Size([50, 1, 32, 64])
 
-        #inputs_cpu = inputs_cpu.float().cuda()
-        #targets_cpu = targets_cpu.float().cuda()
-        #inputs.data.resize_as_(inputs_cpu).copy_(inputs_cpu)
-        #targets.data.resize_as_(targets_cpu).copy_(targets_cpu)
+        # inputs_cpu = inputs_cpu.float().cuda()
+        # targets_cpu = targets_cpu.float().cuda()
+        # inputs.data.resize_as_(inputs_cpu).copy_(inputs_cpu)
+        # targets.data.resize_as_(targets_cpu).copy_(targets_cpu)
 
         # compute LR decay
         if decayLr:
@@ -135,16 +135,12 @@ for epoch in range(epochs):
     with torch.no_grad():
         for i, validata in enumerate(valiLoader, 0):
             inputs_cpu, targets_cpu = validata
+            inputs, targets = inputs_cpu.cuda(), targets_cpu.cuda()
 
             # test code
             # print(i)
             # print(inputs_cpu.size())  # torch.Size([50, 10, 12, 32, 64])
             # print(targets_cpu.size())  # torch.Size([50, 1, 32, 64])
-
-            inputs_cpu = inputs_cpu.float().cuda()
-            targets_cpu = targets_cpu.float().cuda()
-            inputs.data.resize_as_(inputs_cpu).copy_(inputs_cpu)
-            targets.data.resize_as_(targets_cpu).copy_(targets_cpu)
 
             outputs = netG(inputs)
             outputs_cpu = outputs.data.cpu().numpy()

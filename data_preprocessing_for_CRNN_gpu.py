@@ -44,7 +44,8 @@ class PressureDataset(Dataset):
     TRAIN = 0
     TEST = 2
 
-    def __init__(self, mode=TRAIN, dataDir="/home/yyc/chenxi/CRNN_for_smart_bed/dataset/for_train", dataDirTest="/home/yyc/chenxi/CRNN_for_smart_bed/dataset/for_test/", time_step=10):
+    def __init__(self, mode=TRAIN, dataDir="/home/yyc/chenxi/CRNN_for_smart_bed/dataset/for_train",
+                 dataDirTest="/home/yyc/chenxi/CRNN_for_smart_bed/dataset/for_test/", time_step=10):
         global pressureNormalization, inputNormalization
 
         if not (mode == self.TRAIN or mode == self.TEST):
@@ -153,11 +154,11 @@ class PressureDataset(Dataset):
         X = []
         y = []
         for i in range(self.totalLength - self.time_step):
-            X.append([a for a in self.new_inputs[i: (i + self.time_step)].numpy()])
-            y.append(self.new_targets[i + self.time_step].numpy())
+            X.append(self.new_inputs[i: (i + self.time_step)])
+            y.append(self.new_targets[i + self.time_step])
 
-        X = np.array(X)
-        y = np.array(y)
+        X = torch.stack(X, dim=0)
+        y = torch.stack(y, dim=0)
         return X, y
 
     def __getitem__(self, idx):

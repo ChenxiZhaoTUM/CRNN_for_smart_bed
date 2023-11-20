@@ -156,14 +156,11 @@ class PressureDataset(Dataset):
         X = []
         y = []
         for i in range(self.totalLength - self.time_step):
-            # X.append([a for a in self.new_inputs[i: (i + self.time_step)]])  # GPU wrong
-            # y.append(self.new_targets[i + self.time_step])
+            X.append(self.new_inputs[i: (i + self.time_step)])
+            y.append(self.new_targets[i + self.time_step])
 
-            X.append([a for a in self.new_inputs[i: (i + self.time_step)].numpy()])
-            y.append(self.new_targets[i + self.time_step].numpy())
-
-        X = np.array(X)
-        y = np.array(y)
+        X = torch.stack(X, dim=0)
+        y = torch.stack(y, dim=0)
         return X, y
 
     def __getitem__(self, idx):
